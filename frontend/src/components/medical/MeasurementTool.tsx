@@ -44,7 +44,7 @@ export function MeasurementTool({ modelId, markers, onAddMarker, onClear }: Prop
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
               mode === m
                 ? "bg-brand-600 text-white shadow-sm"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
             }`}
           >
             {m === "distance" ? "Distance" : "Angle"}
@@ -52,9 +52,9 @@ export function MeasurementTool({ modelId, markers, onAddMarker, onClear }: Prop
         ))}
       </div>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-400">
         {mode === "distance" ? "Pick 2 points" : "Pick 3 points"}{" "}
-        <span className="font-mono text-slate-600">
+        <span className="font-mono text-slate-300">
           {markers.length}/{needed}
         </span>{" "}
         selected.
@@ -68,13 +68,16 @@ export function MeasurementTool({ modelId, markers, onAddMarker, onClear }: Prop
         >
           Calculate
         </button>
-        <button onClick={onClear} className="btn-ghost px-2 py-1.5 text-xs">
+        <button
+          onClick={onClear}
+          className="rounded-md px-2 py-1.5 text-xs text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+        >
           Clear
         </button>
       </div>
 
       {result && (
-        <p className="rounded-md bg-slate-100 px-3 py-2 font-mono text-sm font-medium text-slate-800">
+        <p className="rounded-md bg-slate-800 px-3 py-2 font-mono text-sm font-medium text-brand-300">
           {result}
         </p>
       )}

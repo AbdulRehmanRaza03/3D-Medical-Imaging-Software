@@ -142,3 +142,97 @@ export interface ErrorResponse {
   detail: string;
   code: string | null;
 }
+
+// --- Phase 3: AI Segmentation ---
+export interface SegmentationModelInfo {
+  id: string;
+  name: string;
+  version: string;
+  task: string;
+  labels: string[];
+  framework: string;
+  target_spacing: number[] | null;
+  checkpoint_path: string | null;
+  checkpoint_available: boolean;
+}
+
+export interface SegmentationJobResponse {
+  job_id: string;
+  status: string;
+}
+
+export interface SegmentationLabelOut {
+  id: number;
+  name: string;
+  color: string;
+  voxel_count: number;
+  volume_cm3: number;
+  bbox_min: number[] | null;
+  bbox_max: number[] | null;
+  centroid: number[] | null;
+}
+
+export interface SegmentationResult {
+  id: number;
+  study_id: number;
+  model_id: string;
+  model_version: string;
+  status: string;
+  created_at: string;
+  processing_duration_sec: number | null;
+  device: string | null;
+  labels: SegmentationLabelOut[];
+  error: string | null;
+}
+
+export interface SegmentationJobStatus {
+  id: string;
+  study_id: number;
+  task_type: string;
+  status: string;
+  progress: number;
+  message: string | null;
+  error: string | null;
+  result_id: number | null;
+}
+
+// --- Phase 2: MPR ---
+export type PlaneName = "axial" | "coronal" | "sagittal";
+
+export interface VolumeInfo {
+  shape: [number, number, number]; // depth, height, width
+  dimensions: [number, number, number]; // width, height, depth
+  spacing: [number, number, number]; // sx, sy, sz
+  origin: [number, number, number];
+  direction: number[]; // 9-element row-major
+  hu_min: number;
+  hu_max: number;
+}
+
+export interface MprSlice {
+  plane: PlaneName;
+  index: number;
+  total: number;
+  width: number;
+  level: number;
+  rows: number;
+  columns: number;
+  physical_width: number;
+  physical_height: number;
+  image_base64: string;
+}
+
+export interface CoordinateInfo {
+  voxel: [number, number, number]; // fractional x,y,z
+  index: [number, number, number]; // integer x,y,z = column,row,slice
+  clamped_index: [number, number, number];
+  world: [number, number, number];
+  hu: number;
+  in_bounds: boolean;
+}
+
+export interface VoxelInfo {
+  index: [number, number, number];
+  world: [number, number, number];
+  hu: number;
+}

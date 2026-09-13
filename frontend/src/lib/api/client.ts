@@ -1,16 +1,24 @@
 /** Typed API client for the OrthoVision AI backend. */
 
 import type {
+  CoordinateInfo,
   DashboardStats,
   Job,
   Measurement,
   Metadata,
   Model,
+  MprSlice,
+  PlaneName,
   ReconstructRequest,
+  SegmentationJobResponse,
+  SegmentationJobStatus,
+  SegmentationModelInfo,
+  SegmentationResult,
   SliceResponse,
   Study,
   StudyDetail,
   UploadResult,
+  VolumeInfo,
 } from "@/types/medical";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -137,5 +145,55 @@ export const api = {
 
   exportUrl(modelId: number, fmt: "stl" | "obj" | "glb"): string {
     return `${API_BASE}/api/v1/models/${modelId}/export/${fmt}`;
+  },
+
+  getVolumeInfo(id: number): Promise<VolumeInfo> {
+    return request(`/api/v1/studies/${id}/volume`);
+  },
+
+  getMprSlice(
+    id: number,
+    plane: PlaneName,
+    index: number,
+    width?: number,
+    level?: number,
+  ): Promise<MprSlice> {
+    const params = new URLSearchParams({ index: String(index) });
+    if (width != null) params.set("width", String(width));
+    if (level != null) params.set("level", String(level));
+    return request(`/api/v1/studies/${id}/mpr/${plane}?${params.toString()}`);
+  },
+
+  getCoordinates(id: number, x: number, y: number, z: number): Promise<CoordinateInfo> {
+    const params = new URLSearchParams({
+      x: String(x),
+      y: String(y),
+      z: String(z),
+    });
+    return request(`/api/v1/studies/${id}/coordinates?${params.toString()}`);
+  },
+
+  listSegmentationModels(): Promise<SegmentationModelInfo[]> {
+    return request("/api/v1/segmentation/models");
+  },
+
+  createSegmentationJob(studyId: number, modelId: string): Promise<SegmentationJobResponse> {
+    return request("/api/v1/segmentation/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model_id: modelId, study_id: studyId }),
+    });
+  },
+
+  getSegmentationJob(jobId: string): Promise<SegmentationJobStatus> {
+    return request(`/api/v1/segmentation/jobs/${jobId}`);
+  },
+
+  listSegmentations(studyId: number): Promise<{ results: SegmentationResult[] }> {
+    return request(`/api/v1/studies/${studyId}/segmentations`);
+  },
+
+  getSegmentationResult(resultId: number): Promise<SegmentationResult> {
+    return request(`/api/v1/segmentation/results/${resultId}`);
   },
 };

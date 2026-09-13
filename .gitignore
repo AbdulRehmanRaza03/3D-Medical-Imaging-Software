@@ -27,6 +27,12 @@ backend/storage/
 *.obj
 *.glb
 
+# AI model checkpoints (large; not committed)
+*.pt
+*.pth
+*.ckpt
+*.onnx
+
 # Generated sample test data
 sample_dicom/
 backend/sample_dicom/

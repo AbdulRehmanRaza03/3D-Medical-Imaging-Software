@@ -51,6 +51,7 @@ def _update_job(
     message: str | None = None,
     error: str | None = None,
     result_model_id: int | None = None,
+    result_id: int | None = None,
 ) -> None:
     db = SessionLocal()
     try:
@@ -67,6 +68,10 @@ def _update_job(
             job.error = error
         if result_model_id is not None:
             job.result_model_id = result_model_id
+        if result_id is not None:
+            # Store segmentation result id in the result_model_id column for
+            # simplicity (nullable int already present).
+            job.result_model_id = result_id
         db.commit()
     except Exception:  # noqa: BLE001
         logger.exception("Failed to update job %s", job_id)
@@ -204,3 +209,95 @@ def _selected_series_id(db: Session, study_id: int) -> int | None:
         select(Series.id).where(Series.study_id == study_id, Series.is_selected.is_(True))
     ).first()
     return row[0] if row else None
+
+
+# --- Segmentation jobs (Phase 3) ---
+
+
+def submit_segmentation(
+    db: Session,
+    study_id: int,
+    model_id: str = "bone_1",
+) -> ProcessingJob:
+    """Queue an AI segmentation job and return its job ID immediately."""
+    from app.models.study import Study
+
+    study = db.get(Study, study_id)
+    if study is None:
+        raise NotFoundError("Study not found.", code="study_not_found")
+
+    job = _create_job(db, study_id, "segmentation")
+    db.commit()
+
+    _executor.submit(_run_segmentation, job.id, study_id, model_id)
+    return job
+
+
+def _run_segmentation(job_id: str, study_id: int, model_id: str) -> None:
+    import json
+
+    from app.models.study import SegmentationResult
+    from app.services import study_service
+    from app.services.storage import storage_service
+    from ai.segmentation import service as seg_service
+
+    try:
+        _update_job(job_id, status=JobStatus.processing.value, progress=0.02,
+                     message="Preparing volume…")
+
+        loaded = study_service.load_volume(study_id)
+        data = loaded["data"]
+        spacing = tuple(float(v) for v in loaded["spacing"])
+
+        def _progress(frac: float, msg: str):
+            # Map AI pipeline progress (0..1) onto the job progress scale.
+            _update_job(job_id, progress=0.05 + frac * 0.9, message=msg)
+
+        result = seg_service.run_segmentation(
+            model_id=model_id,
+            volume=data,
+            spacing=spacing,
+            progress_cb=_progress,
+        )
+
+        mask = result["mask"]
+        mask_path = storage_service.save_segmentation_mask(study_id, mask)
+
+        db = SessionLocal()
+        try:
+            seg = SegmentationResult(
+                study_id=study_id,
+                model_id=model_id,
+                model_version="1.0",
+                status="completed",
+                mask_path=str(mask_path),
+                spacing_x=spacing[0],
+                spacing_y=spacing[1],
+                spacing_z=spacing[2],
+                origin_x=float(loaded["origin"][0]),
+                origin_y=float(loaded["origin"][1]),
+                origin_z=float(loaded["origin"][2]),
+                direction=",".join(str(v) for v in loaded["direction"]),
+                labels=json.dumps(result["labels"]),
+                processing_duration_sec=result["duration_sec"],
+                device=result["device"],
+            )
+            db.add(seg)
+            db.commit()
+            db.refresh(seg)
+            result_id = seg.id
+
+            _update_job(
+                job_id,
+                status=JobStatus.completed.value,
+                progress=1.0,
+                message="Segmentation complete.",
+                result_id=result_id,
+            )
+        finally:
+            db.close()
+
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Segmentation job %s failed", job_id)
+        _update_job(job_id, status=JobStatus.failed.value, progress=1.0,
+                     error=str(exc), message="Segmentation failed.")

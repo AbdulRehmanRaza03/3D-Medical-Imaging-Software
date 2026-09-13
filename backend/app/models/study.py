@@ -152,3 +152,37 @@ class Measurement(Base):
     unit: Mapped[str] = mapped_column(String(16), default="mm")
     points: Mapped[str] = mapped_column(Text)  # JSON-encoded list of points
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+class SegmentationResult(Base):
+    """A stored AI segmentation result (mask + metadata).
+
+    Only metadata and file references are stored here; the mask array lives in
+    the structured storage directory under
+    ``storage/studies/{study_id}/segmentations/``.
+    """
+
+    __tablename__ = "segmentation_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    study_id: Mapped[int] = mapped_column(
+        ForeignKey("studies.id", ondelete="CASCADE"), index=True
+    )
+    model_id: Mapped[str] = mapped_column(String(64))
+    model_version: Mapped[str] = mapped_column(String(16), default="1.0")
+    status: Mapped[str] = mapped_column(String(16), default="processing")
+    mask_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Preserve the source geometry for alignment.
+    spacing_x: Mapped[float | None] = mapped_column(Float, nullable=True)
+    spacing_y: Mapped[float | None] = mapped_column(Float, nullable=True)
+    spacing_z: Mapped[float | None] = mapped_column(Float, nullable=True)
+    origin_x: Mapped[float | None] = mapped_column(Float, nullable=True)
+    origin_y: Mapped[float | None] = mapped_column(Float, nullable=True)
+    origin_z: Mapped[float | None] = mapped_column(Float, nullable=True)
+    direction: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Label summary (JSON: list of label dicts with voxel_count/volume/bbox).
+    labels: Mapped[str | None] = mapped_column(Text, nullable=True)
+    processing_duration_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
+    device: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)

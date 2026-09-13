@@ -1,7 +1,5 @@
 "use client";
 
-import { IconSliders } from "@/components/ui/icons";
-
 interface Props {
   width: number;
   level: number;
@@ -26,7 +24,7 @@ export function WindowLevelControls({ width, level, onWidthChange, onLevelChange
               onWidthChange(w);
               onLevelChange(l);
             }}
-            className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:border-brand-300 hover:text-brand-600"
+            className="rounded-md border border-slate-700 bg-slate-800/50 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-brand-500/60 hover:text-brand-300"
           >
             {label}
           </button>
@@ -35,8 +33,8 @@ export function WindowLevelControls({ width, level, onWidthChange, onLevelChange
 
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <label className="text-xs font-medium text-slate-500">Window width</label>
-          <span className="font-mono text-xs text-slate-600">{Math.round(width)}</span>
+          <label className="text-xs font-medium text-slate-400">Window width</label>
+          <span className="font-mono text-xs text-slate-200">{Math.round(width)}</span>
         </div>
         <input
           type="range"
@@ -51,8 +49,8 @@ export function WindowLevelControls({ width, level, onWidthChange, onLevelChange
 
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <label className="text-xs font-medium text-slate-500">Window level</label>
-          <span className="font-mono text-xs text-slate-600">{Math.round(level)}</span>
+          <label className="text-xs font-medium text-slate-400">Window level</label>
+          <span className="font-mono text-xs text-slate-200">{Math.round(level)}</span>
         </div>
         <input
           type="range"

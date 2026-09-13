@@ -6,8 +6,8 @@ function Row({ label, value }: { label: string; value: string | number | null | 
   if (value == null || value === "") return null;
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
-      <span className="shrink-0 text-xs text-slate-400">{label}</span>
-      <span className="truncate text-right font-mono text-xs text-slate-700">{value}</span>
+      <span className="shrink-0 text-xs text-slate-500">{label}</span>
+      <span className="truncate text-right font-mono text-xs text-slate-200">{value}</span>
     </div>
   );
 }
@@ -31,16 +31,13 @@ export function ModelInfo({ metadata, model }: Props) {
   return (
     <div className="space-y-4">
       <div>
-        <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+        <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
           Study
         </h4>
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-slate-800">
           <Row label="Modality" value={metadata?.modality} />
           <Row label="Slices" value={metadata?.slice_count} />
-          <Row
-            label="Dimensions"
-            value={metadata ? `${metadata.rows} × ${metadata.columns}` : undefined}
-          />
+          <Row label="Dimensions" value={metadata ? `${metadata.rows} × ${metadata.columns}` : undefined} />
           <Row label="Voxel spacing" value={spacingStr} />
           <Row label="Study date" value={metadata?.study_date} />
           <Row label="Description" value={metadata?.series_description} />
@@ -49,10 +46,10 @@ export function ModelInfo({ metadata, model }: Props) {
 
       {model && (
         <div>
-          <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
             Model
           </h4>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-slate-800">
             <Row label="Method" value={model.method.replace(/_/g, " ")} />
             <Row label="Threshold" value={`${model.threshold_hu} HU`} />
             <Row label="Vertices" value={model.vertices.toLocaleString()} />

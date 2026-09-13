@@ -7,16 +7,23 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          50: "#eef5ff",
-          100: "#d9e8ff",
-          200: "#bcd8ff",
-          300: "#8ebfff",
-          400: "#599bff",
-          500: "#3377ff",
-          600: "#1b57f0",
-          700: "#1443d6",
-          800: "#1738ad",
-          900: "#193687",
+          50: "#ecfeff",
+          100: "#cffafe",
+          200: "#a5f3fc",
+          300: "#67e8f9",
+          400: "#22d3ee",
+          500: "#06b6d4",
+          600: "#0891b2",
+          700: "#0e7490",
+        },
+        accent: {
+          DEFAULT: "#38bdf8",
+        },
+        surface: {
+          DEFAULT: "#0b0f14",
+          panel: "#111820",
+          "panel-secondary": "#161f29",
+          border: "#26313d",
         },
         slate: {
           850: "#151f2e",

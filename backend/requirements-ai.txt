@@ -1,0 +1,19 @@
+# OrthoVision AI — Phase 3 AI segmentation dependencies.
+#
+# These are OPTIONAL for the core application (Phases 1-2 run without them).
+# Install ONLY when you want to run AI segmentation:
+#
+#   py -m pip install -r requirements-ai.txt
+#
+# IMPORTANT: torch requires the Microsoft Visual C++ Redistributable on Windows.
+# If `import torch` fails with "The specified module could not be found" /
+# "msvcp140.dll", install it from:
+#   https://aka.ms/vs/17/release/vc_redist.x64.exe
+#
+# CPU-only build is used here to keep the install size reasonable.
+
+# CPU-only PyTorch wheel (install from the official CPU index).
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.14.0
+monai==1.6.0

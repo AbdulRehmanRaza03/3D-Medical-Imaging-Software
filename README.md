@@ -54,9 +54,11 @@ graph LR
 | ------ | ---------- |
 | **DICOM Ingestion** | Multi-file upload, validation, CT series detection, spatially-correct slice ordering |
 | **Volume Construction** | HU conversion (`RescaleSlope`/`Intercept`), preservation of spacing/origin/direction |
-| **2D Viewer** | Canvas-based axial viewer with scroll, zoom, pan, and window/level presets |
+| **MPR** | Axial, coronal, and sagittal views from the same volume with synchronized crosshair |
+| **2D Viewer** | Canvas-based viewer with scroll, zoom, pan, window/level, and orientation markers |
 | **3D Reconstruction** | Thresholding → binary mask → Marching Cubes → spacing-aware anatomical mesh |
-| **3D Viewer** | Professional R3F viewer — orbit/zoom/pan, wireframe, grid, axes |
+| **3D Viewer** | Professional R3F viewer — orbit/zoom/pan, opacity, clipping, MPR planes, orthographic camera |
+| **AI Segmentation** | PyTorch + MONAI 3D U-Net pipeline (checkpoint-gated), model registry, CPU/GPU inference |
 | **Measurements** | Physical-unit distance (mm) and angle (°) from real model coordinates |
 | **Export** | STL, OBJ, and GLB export of the *actual* reconstructed mesh |
 | **Jobs** | Background reconstruction with live progress polling |
@@ -73,8 +75,8 @@ graph TD
         D[Dashboard]
         U[Study Upload]
         B[Study Browser]
-        V[Medical Viewer]
-        V --> V2[2D Slice Viewer]
+        V[MPR Workstation]
+        V --> V2[Axial / Coronal / Sagittal]
         V --> V3[3D Viewer]
         V --> V4[Measurements]
         V --> V5[Export]
@@ -88,10 +90,12 @@ graph TD
         S1[DICOM Service]
         S2[Study Service]
         S3[Volume Service]
-        S4[Reconstruction Service]
-        S5[Measurement Service]
-        S6[Export Service]
-        S7[Job Service]
+        S4[MPR Service]
+        S5[Coordinate Service]
+        S6[Reconstruction Service]
+        S7[Measurement Service]
+        S8[Export Service]
+        S9[Job Service]
     end
 
     Frontend --> C --> Backend
@@ -114,7 +118,8 @@ graph TD
 | ----- | ---------- |
 | **Frontend** | Next.js 14, React 18, TypeScript, Tailwind CSS, TanStack Query, Three.js, React Three Fiber, Drei |
 | **Backend** | Python 3.14, FastAPI, Pydantic v2, Uvicorn, SQLAlchemy 2 |
-| **Medical Imaging** | pydicom, NumPy, SciPy, scikit-image (Marching Cubes) |
+| Medical Imaging | pydicom, NumPy, SciPy, scikit-image (Marching Cubes) |
+| **AI / ML** | PyTorch, MONAI (3D U-Net segmentation; optional, checkpoint-gated) |
 | **3D / Mesh** | trimesh (mesh processing + STL/OBJ/GLB export) |
 | **Database** | SQLite (development) → PostgreSQL-ready via `DATABASE_URL` |
 | **Testing** | pytest (backend), Vitest + Testing Library (frontend) |
@@ -187,7 +192,7 @@ cd backend
 pytest
 ```
 
-Covers DICOM validation, series detection, spatial slice ordering, HU conversion, volume construction, reconstruction, mesh generation/validation, export, and API responses.
+Covers DICOM validation, series detection, spatial slice ordering, HU conversion, volume construction, MPR plane extraction, coordinate conversion, reconstruction, mesh generation/validation, export, and API responses.
 
 ### Frontend
 
@@ -197,6 +202,35 @@ npm test            # Vitest
 npm run typecheck   # tsc --noEmit
 npm run build       # production build
 ```
+
+---
+
+## 🤖 AI Segmentation Setup (Phase 3)
+
+The AI segmentation pipeline is fully implemented but gated behind two
+prerequisites:
+
+1. **Install the AI dependencies** (optional — Phases 1-2 run without them):
+
+```bash
+cd backend
+py -m pip install -r requirements-ai.txt
+```
+
+2. **Install a trained model checkpoint** — place the 3D U-Net weights at:
+
+```text
+backend/ai/segmentation/models/bone_1.pt
+```
+
+(or set `OV_MODELS_DIR` to a custom models directory).
+
+> **Windows note:** `torch` requires the Microsoft Visual C++ Redistributable.
+> If `import torch` fails with a missing `msvcp140.dll`, install it from
+> https://aka.ms/vs/17/release/vc_redist.x64.exe.
+
+Until a checkpoint is provided, the system honestly reports **"Model
+checkpoint required"** — it never fabricates segmentation results.
 
 ---
 
@@ -230,7 +264,17 @@ Base path: `/api/v1` · Full reference in [`docs/api.md`](docs/api.md)
 | `GET`  | `/studies` | List studies |
 | `GET`  | `/studies/{id}` | Study detail + series |
 | `GET`  | `/studies/{id}/metadata` | Extracted metadata |
-| `GET`  | `/studies/{id}/slice/{index}` | Windowed slice (base64 PNG) |
+| `GET`  | `/studies/{id}/slice/{index}` | Windowed axial slice (base64 PNG) |
+| `GET`  | `/studies/{id}/volume` | Volume metadata (shape/spacing/origin/direction) |
+| `GET`  | `/studies/{id}/mpr/{axial,coronal,sagittal}` | Windowed MPR slice (base64 PNG) |
+| `GET`  | `/studies/{id}/coordinates` | World → voxel + HU lookup |
+| `GET`  | `/studies/{id}/voxel` | Voxel → world + HU lookup |
+| `GET`  | `/segmentation/models` | List segmentation models |
+| `POST` | `/segmentation/jobs` | Queue segmentation job |
+| `GET`  | `/segmentation/jobs/{id}` | Poll segmentation job |
+| `GET`  | `/studies/{id}/segmentations` | List segmentation results |
+| `GET`  | `/segmentation/results/{id}` | Get segmentation result |
+| `DELETE` | `/segmentation/results/{id}` | Delete segmentation result |
 | `POST` | `/studies/{id}/reconstruct` | Queue reconstruction job |
 | `GET`  | `/studies/{id}/models` | List models |
 | `GET`  | `/models/{id}/mesh` | Binary GLB mesh (3D viewer) |
@@ -247,6 +291,8 @@ Base path: `/api/v1` · Full reference in [`docs/api.md`](docs/api.md)
 ```
 .
 ├── backend/                 # FastAPI application
+│   ├── ai/                  # AI segmentation (Phase 3)
+│   │   └── segmentation/    # model registry, inference, pre/post-processing
 │   ├── app/
 │   │   ├── api/             # REST routers
 │   │   ├── core/            # config, exceptions, logging
@@ -257,18 +303,31 @@ Base path: `/api/v1` · Full reference in [`docs/api.md`](docs/api.md)
 │   ├── tests/               # pytest suite + fixtures
 │   ├── generate_sample_dicom.py
 │   ├── verify_e2e.py
-│   └── requirements.txt
+│   ├── requirements.txt     # core (Phases 1-2)
+│   └── requirements-ai.txt  # optional AI (Phase 3)
 ├── frontend/                # Next.js application
 │   └── src/
 │       ├── app/             # pages (dashboard, upload, study viewer)
 │       ├── components/
-│       │   ├── medical/     # viewer + domain components
+│       │   ├── medical/     # viewer + domain components (incl. mpr/)
 │       │   └── ui/          # design system primitives
 │       ├── hooks/           # TanStack Query hooks
 │       ├── lib/api/         # typed API client
 │       └── types/           # shared TypeScript types
 └── docs/                    # design documentation
 ```
+
+Detailed design docs:
+
+- `docs/architecture.md` — system architecture
+- `docs/dicom-pipeline.md` — DICOM ingestion
+- `docs/reconstruction.md` — Marching Cubes reconstruction
+- `docs/phase-2.md`, `docs/mpr.md`, `docs/coordinate-system.md` — MPR & coordinates
+- `docs/viewer.md`, `docs/viewer-architecture.md`, `docs/window-level.md` — viewer
+- `docs/phase-3.md`, `docs/ai-segmentation.md` — AI segmentation
+- `docs/test-data.md` — obtaining de-identified CT datasets
+- `docs/api.md` — API reference
+- `docs/phase-1.md` — Phase 1 scope
 
 ---
 
@@ -285,8 +344,8 @@ Base path: `/api/v1` · Full reference in [`docs/api.md`](docs/api.md)
 | Phase | Focus |
 | ----- | ----- |
 | **1** ✅ | 3D Imaging Core — DICOM ingestion, volume construction, Marching Cubes, interactive viewer |
-| **2** | Advanced visualization — MPR (sagittal/coronal/axial), clipping, transparency |
-| **3** | AI segmentation — MONAI / PyTorch 3D U-Net |
+| **2** ✅ | Advanced visualization — MPR (axial/coronal/sagittal), synchronized crosshair, clipping, opacity, coordinate system |
+| **3** ✅ | AI segmentation — MONAI/PyTorch 3D U-Net pipeline, model registry, CPU/GPU inference (checkpoint-gated) |
 | **4** | Intelligent analysis — volume, symmetry, ICP registration, deviation maps |
 | **5** | Orthopaedic planning — implant visualization & planning |
 | **6** | Research platform — projects, annotations, collaboration, reports |

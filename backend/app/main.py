@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import jobs, models, slices, studies
+from app.api import jobs, models, mpr, segmentation, slices, studies
 from app.core.config import settings
 from app.core.exceptions import OrthoVisionError
 from app.core.logging import configure_logging
@@ -73,5 +73,7 @@ def health() -> dict:
 
 app.include_router(studies.router, prefix=settings.api_prefix)
 app.include_router(slices.router, prefix=settings.api_prefix)
+app.include_router(mpr.router, prefix=settings.api_prefix)
 app.include_router(models.router, prefix=settings.api_prefix)
 app.include_router(jobs.router, prefix=settings.api_prefix)
+app.include_router(segmentation.router, prefix=settings.api_prefix)
