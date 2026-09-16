@@ -179,14 +179,4 @@ def _encode_volume(data: np.ndarray, meta: dict) -> bytes:
 
 def load_volume(study_id: int):
     """Load a saved volume's data + metadata for a study."""
-    import io
-
-    from app.services.storage.storage_service import volume_dir
-
-    vdir = volume_dir(study_id)
-    candidates = list(vdir.glob("*.npz"))
-    if not candidates:
-        raise NotFoundError("Volume not found for study.", code="volume_missing")
-    path = candidates[0]
-    loaded = np.load(path, allow_pickle=False)
-    return loaded
+    return storage_service.load_volume(study_id)

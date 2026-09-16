@@ -18,9 +18,10 @@ env/
 *.sqlite
 *.sqlite3
 
-# Generated storage (DICOM, volumes, models, exports)
-storage/
-backend/storage/
+# Generated storage (DICOM, volumes, models, exports) — NOT source code.
+# (The source module lives at backend/app/services/storage/ and is tracked.)
+/storage/
+/backend/storage/
 *.npz
 *.npy
 *.stl

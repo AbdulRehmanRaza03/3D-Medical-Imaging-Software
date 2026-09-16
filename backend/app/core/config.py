@@ -30,12 +30,29 @@ class Settings(BaseSettings):
     # Root directory for all persisted artifacts (DICOM, volumes, models, exports).
     storage_dir: str = "./storage"
 
+    # Storage backend: "local" (filesystem) or "s3" (S3-compatible object
+    # storage such as Supabase Storage, Cloudflare R2, AWS S3, or MinIO).
+    storage_backend: str = "local"
+
+    # --- Object storage (only used when storage_backend == "s3") ---
+    s3_bucket_name: str = ""
+    s3_endpoint_url: str = ""
+    s3_region: str = ""
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
+
     # --- Upload limits ---
     max_upload_size_bytes: int = 2 * 1024 * 1024 * 1024  # 2 GiB total per upload
     max_files_per_upload: int = 5000
 
     # --- Database ---
     database_url: str = "sqlite:///./orthovision.db"
+
+    # --- Job queue ---
+    # "local" (in-process threads) or "redis" (RQ + Redis for production).
+    job_backend: str = "local"
+    redis_url: str = "redis://localhost:6379/0"
+    redis_queue: str = "orthovision"
 
     # --- CORS ---
     cors_origins: str = "http://localhost:3000"

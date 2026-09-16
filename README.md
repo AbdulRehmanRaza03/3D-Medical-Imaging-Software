@@ -326,7 +326,9 @@ Detailed design docs:
 - `docs/viewer.md`, `docs/viewer-architecture.md`, `docs/window-level.md` — viewer
 - `docs/phase-3.md`, `docs/ai-segmentation.md` — AI segmentation
 - `docs/test-data.md` — obtaining de-identified CT datasets
+- `docs/real-medical-data.md` — real DICOM data + Supabase/Firebase wiring
 - `docs/api.md` — API reference
+- `docs/deployment.md` — production deployment guide
 - `docs/phase-1.md` — Phase 1 scope
 
 ---

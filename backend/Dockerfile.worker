@@ -1,0 +1,40 @@
+# OrthoVision AI worker image (with optional AI/GPU support).
+#
+# Build:  docker build -f Dockerfile.worker -t orthovision-worker .
+# Run:    docker run --env-file .env orthovision-worker
+
+FROM python:3.14-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgomp1 \
+        libglib2.0-0 \
+        libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Core + queue dependencies.
+COPY requirements.txt requirements-storage.txt ./
+RUN pip install --upgrade pip \
+    && pip install -r requirements.txt \
+    && pip install -r requirements-storage.txt
+
+# OPTIONAL: AI dependencies (torch + monai).
+# Uncomment to build an AI-capable worker. For GPU, use the nvidia/cuda base
+# image instead of python:3.14-slim and install the GPU torch wheel.
+# COPY requirements-ai.txt ./
+# RUN pip install -r requirements-ai.txt
+
+# Application source.
+COPY app ./app
+COPY ai ./ai
+COPY worker.py ./worker.py
+
+# Persistable storage (or use S3 backend).
+RUN mkdir -p /data/storage
+
+CMD ["python", "worker.py"]

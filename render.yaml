@@ -1,0 +1,65 @@
+# Render Blueprint — Infrastructure-as-code for the backend.
+# See https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: orthovision-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    numInstances: 1
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: STORAGE_DIR
+        value: /data/storage
+      - key: STORAGE_BACKEND
+        value: local
+      - key: JOB_BACKEND
+        value: redis
+      - key: REDIS_QUEUE
+        value: orthovision
+      # Replace with your Vercel frontend URL (comma-separated for multiple).
+      - key: CORS_ORIGINS
+        value: https://your-app.vercel.app
+      # --- Database (Supabase connection string) ---
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orthovision-db
+          property: connectionString
+      # --- Redis (set REDIS_URL from your Redis host) ---
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: orthovision-redis
+          property: connectionString
+
+  # Background worker that consumes the Redis queue.
+  - type: worker
+    name: orthovision-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile.worker
+    plan: starter
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: orthovision-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: orthovision-redis
+          property: connectionString
+      - key: REDIS_QUEUE
+        value: orthovision
+      - key: JOB_BACKEND
+        value: redis
+      - key: STORAGE_BACKEND
+        value: local
+      - key: STORAGE_DIR
+        value: /data/storage

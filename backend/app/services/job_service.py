@@ -1,9 +1,12 @@
-"""Lightweight background processing-job system.
+"""Background processing-job system.
 
-Phase 1 uses a simple thread-pool executor. The interface is deliberately
-decoupled so a Redis/Celery (or other) backend can be swapped in later without
-changing the API contract. Job state is persisted to the database and polled by
-the frontend.
+Supports two interchangeable backends via ``JOB_BACKEND``:
+
+- ``local`` (default): in-process thread pool (dev / small deployments).
+- ``redis``: RQ queue on Redis (production; scalable, survives restarts).
+
+Job state is always persisted to the database and polled by the frontend, so
+the API contract is identical regardless of backend.
 """
 from __future__ import annotations
 
@@ -16,7 +19,8 @@ from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import NotFoundError
+from app.core.config import settings
+from app.core.exceptions import NotFoundError, ProcessingError
 from app.db.session import SessionLocal
 from app.models.study import JobStatus, ProcessingJob, Study, StudyStatus, MeshModel
 from app.schemas.medical import ReconstructRequest
@@ -27,6 +31,19 @@ logger = logging.getLogger(__name__)
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ov-worker")
 
 _progress_hooks: dict[str, Callable[[float, str], None]] = {}
+
+
+def _use_redis() -> bool:
+    return (settings.job_backend or "local").lower() == "redis"
+
+
+def _redis_queue():
+    """Return the RQ queue (lazily), or raise a clear error if unavailable."""
+    from redis import Redis
+    from rq import Queue
+
+    redis_conn = Redis.from_url(settings.redis_url, decode_responses=False)
+    return Queue(settings.redis_queue, connection=redis_conn)
 
 
 def _create_job(db: Session, study_id: int, task_type: str) -> ProcessingJob:
@@ -100,12 +117,23 @@ def submit_reconstruction(
     study.status = StudyStatus.processing.value
     db.commit()
 
-    _executor.submit(
-        _run_reconstruction,
-        job.id,
-        study_id,
-        req,
-    )
+    if _use_redis():
+        _redis_queue().enqueue(
+            _run_reconstruction,
+            job.id,
+            study_id,
+            req,
+            job_id=job.id,
+            job_timeout="1h",
+            result_ttl=0,
+        )
+    else:
+        _executor.submit(
+            _run_reconstruction,
+            job.id,
+            study_id,
+            req,
+        )
     return job
 
 
@@ -229,7 +257,18 @@ def submit_segmentation(
     job = _create_job(db, study_id, "segmentation")
     db.commit()
 
-    _executor.submit(_run_segmentation, job.id, study_id, model_id)
+    if _use_redis():
+        _redis_queue().enqueue(
+            _run_segmentation,
+            job.id,
+            study_id,
+            model_id,
+            job_id=job.id,
+            job_timeout="1h",
+            result_ttl=0,
+        )
+    else:
+        _executor.submit(_run_segmentation, job.id, study_id, model_id)
     return job
 
 
