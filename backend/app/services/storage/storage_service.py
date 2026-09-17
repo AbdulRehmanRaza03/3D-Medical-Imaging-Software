@@ -177,7 +177,21 @@ class _S3Storage:
         return "/".join(str(p) for p in parts)
 
     def _put(self, key: str, data: bytes) -> str:
-        self._client().put_object(Bucket=self._bucket, Key=key, Body=data)
+        try:
+            self._client().put_object(Bucket=self._bucket, Key=key, Body=data)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception(
+                "S3 PutObject failed (bucket=%s, key=%s, endpoint=%s, region=%s)",
+                self._bucket,
+                key,
+                settings.s3_endpoint_url or "(default AWS)",
+                settings.s3_region or "(unset)",
+            )
+            raise ProcessingError(
+                "Failed to write object to object storage. Check S3 credentials, "
+                "bucket name, endpoint URL, and region.",
+                code="storage_write_failed",
+            ) from exc
         return key
 
     def _get_bytes(self, key: str) -> bytes:
