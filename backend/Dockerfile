@@ -29,12 +29,14 @@ RUN pip install --upgrade pip \
 
 # Application source.
 COPY app ./app
+COPY ai ./ai
 
-# AI segmentation is optional and gated at runtime; do not install by default.
-# To enable, uncomment and place a model checkpoint under /app/ai/segmentation/models/.
-# COPY requirements-ai.txt ./
-# RUN pip install -r requirements-ai.txt
-# COPY ai ./ai
+# AI segmentation is gated at runtime by checkpoint availability AND torch/MONAI
+# presence. The ``ai`` package is copied (it is imported by the API layer), but
+# the heavy runtime (torch/MONAI) is NOT installed in this image — the app
+# reports "Model checkpoint required" / "runtime unavailable" gracefully.
+# To actually run AI inference, build the worker image (Dockerfile.worker) with
+# requirements-ai.txt installed and a checkpoint present.
 
 # Persistable volume (bind mount in production or use S3 backend).
 RUN mkdir -p /data/storage
