@@ -17,6 +17,25 @@ from pydicom.dataset import FileDataset, FileMetaDataset
 from pydicom.uid import ExplicitVRLittleEndian, generate_uid
 
 
+@pytest.fixture(autouse=True)
+def _isolated_test_environment(monkeypatch):
+    """Force safe local defaults during tests.
+
+    The developer's ``.env`` may point at production services (S3 storage,
+    PostgreSQL, Redis). Tests must never touch those, so we override the
+    network-dependent backends with local equivalents before any module
+    imports the app or storage layer.
+    """
+    monkeypatch.setenv("STORAGE_BACKEND", "local")
+    monkeypatch.setenv("JOB_BACKEND", "local")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///./test_orthovision.db")
+    # Re-import settings so the overrides take effect before ``app`` is built.
+    import app.core.config as config
+
+    config.get_settings.cache_clear()
+    config.settings = config.get_settings()
+
+
 def make_ct_dataset(
     *,
     series_uid: str,

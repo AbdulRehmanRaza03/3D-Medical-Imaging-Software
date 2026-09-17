@@ -14,16 +14,32 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from app.core.config import settings
 
 
+def _normalize_database_url(url: str) -> str:
+    """Normalize the database URL for the installed driver.
+
+    Defaults the PostgreSQL dialect to the modern ``psycopg`` (v3) driver,
+    which ships as a prebuilt wheel for all supported Python versions
+    (``psycopg`` is preferred over ``psycopg2``, which lacks wheels for very
+    new Python releases). If a user explicitly sets ``postgresql+psycopg2://``
+    we leave it untouched.
+    """
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
+
+
 class Base(DeclarativeBase):
     """Declarative base for all ORM models."""
 
 
+_database_url = _normalize_database_url(settings.database_url)
+
 _connect_args: dict = {}
-if settings.database_url.startswith("sqlite"):
+if _database_url.startswith("sqlite"):
     _connect_args["check_same_thread"] = False
 
 engine = create_engine(
-    settings.database_url,
+    _database_url,
     connect_args=_connect_args,
     future=True,
 )
