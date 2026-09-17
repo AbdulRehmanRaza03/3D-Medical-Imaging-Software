@@ -150,6 +150,17 @@ class _S3Storage:
                 "S3 storage backend requires S3_BUCKET_NAME to be set.",
                 code="storage_config_missing",
             )
+        # S3 bucket names disallow spaces and uppercase; fail fast with a clear
+        # message instead of a cryptic boto3 validation error at request time.
+        import re
+
+        if not re.match(r"^[a-z0-9.\-_]+$", self._bucket):
+            raise ProcessingError(
+                "Invalid S3_BUCKET_NAME. Bucket names must be lowercase and may "
+                "contain only letters, numbers, dots, dashes, or underscores "
+                "(no spaces).",
+                code="storage_config_invalid",
+            )
 
     def _client(self):
         import boto3
@@ -184,14 +195,9 @@ class _S3Storage:
         return obj["Body"].read()
 
     def save_dicom_files(self, study_id: int, files: list[tuple[str, bytes]]) -> None:
-        client = self._client()
         for fname, data in files:
             safe = os.path.basename(fname) or "unnamed.dcm"
-            client.put_object(
-                Bucket=self._bucket,
-                Key=self._key("studies", study_id, "dicom", safe),
-                Body=data,
-            )
+            self._put(self._key("studies", study_id, "dicom", safe), data)
 
     def save_volume(self, study_id: int, buf: bytes, filename: str = "volume.npz") -> str:
         return self._put(self._key("studies", study_id, "volume", filename), buf)
