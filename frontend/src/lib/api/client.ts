@@ -21,7 +21,7 @@ import type {
   VolumeInfo,
 } from "@/types/medical";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/+$/, "");
 
 export class ApiError extends Error {
   status: number;
@@ -38,7 +38,9 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`, init);
+    // Normalize the path to always begin with a single leading slash.
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    res = await fetch(`${API_BASE}${normalizedPath}`, init);
   } catch (err) {
     throw new ApiError(
       "Network error — could not reach the backend server.",
