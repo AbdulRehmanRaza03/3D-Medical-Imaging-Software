@@ -274,18 +274,20 @@ def _io_bytes(array: np.ndarray) -> bytes:
 
 
 def _build_storage():
-    backend = (settings.storage_backend or "local").lower()
-    if backend == "s3":
-        # Fail-safe: if S3 is requested but not fully configured, fall back to
-        # local storage so the application still boots and accepts uploads
-        # (e.g. for demos) instead of crashing on a misconfigured bucket.
-        if not (settings.s3_bucket_name and settings.s3_endpoint_url):
-            logger.warning(
-                "STORAGE_BACKEND=s3 but S3_BUCKET_NAME/S3_ENDPOINT_URL are "
-                "missing; falling back to local storage."
-            )
-            return _LocalStorage()
-        return _S3Storage()
+    # DEMO/TEST MODE: storage is forced to local unless S3 is explicitly
+    # enabled via OV_ENABLE_S3=true (with valid S3_* credentials). This makes
+    # the deployed app work end-to-end without external object storage, and
+    # ignores any STORAGE_BACKEND value that may still be set in the host env.
+    enable_s3 = (settings.ov_enable_s3 or "").lower() in ("1", "true", "yes")
+    if enable_s3:
+        # S3 requires bucket + endpoint to be configured; otherwise warn and
+        # fall back to local so the app still boots.
+        if settings.s3_bucket_name and settings.s3_endpoint_url:
+            return _S3Storage()
+        logger.warning(
+            "OV_ENABLE_S3=true but S3_BUCKET_NAME/S3_ENDPOINT_URL are missing; "
+            "falling back to local storage."
+        )
     return _LocalStorage()
 
 

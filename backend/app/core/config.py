@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     s3_region: str = ""
     s3_access_key: str = ""
     s3_secret_key: str = ""
+    # Explicitly enable S3 storage (default off → local storage is used).
+    ov_enable_s3: str = ""
 
     # --- Upload limits ---
     max_upload_size_bytes: int = 2 * 1024 * 1024 * 1024  # 2 GiB total per upload
