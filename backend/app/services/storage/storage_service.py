@@ -276,6 +276,15 @@ def _io_bytes(array: np.ndarray) -> bytes:
 def _build_storage():
     backend = (settings.storage_backend or "local").lower()
     if backend == "s3":
+        # Fail-safe: if S3 is requested but not fully configured, fall back to
+        # local storage so the application still boots and accepts uploads
+        # (e.g. for demos) instead of crashing on a misconfigured bucket.
+        if not (settings.s3_bucket_name and settings.s3_endpoint_url):
+            logger.warning(
+                "STORAGE_BACKEND=s3 but S3_BUCKET_NAME/S3_ENDPOINT_URL are "
+                "missing; falling back to local storage."
+            )
+            return _LocalStorage()
         return _S3Storage()
     return _LocalStorage()
 
