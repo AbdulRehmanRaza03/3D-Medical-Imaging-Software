@@ -15,6 +15,7 @@ import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Callable
 
 from sqlalchemy.orm import Session
@@ -100,6 +101,28 @@ def get_job(db: Session, job_id: str) -> ProcessingJob:
     job = db.get(ProcessingJob, job_id)
     if job is None:
         raise NotFoundError("Job not found.", code="job_not_found")
+
+    # Stale-job detection: a job stuck in a non-terminal state for too long
+    # means its worker thread/process died (e.g. OOM, redeploy, idle sleep).
+    # Mark it failed so the frontend stops polling and surfaces a clear error
+    # instead of spinning on "Reconstructing… 0%" forever.
+    _JOB_STALE_SECONDS = 600  # 10 minutes without progress is treated as dead
+    if job.status in (JobStatus.queued.value, JobStatus.processing.value):
+        updated = job.updated_at
+        if updated is not None:
+            now = datetime.now(timezone.utc)
+            if updated.tzinfo is None:
+                updated = updated.replace(tzinfo=timezone.utc)
+            if (now - updated).total_seconds() > _JOB_STALE_SECONDS:
+                job.status = JobStatus.failed.value
+                job.error = (
+                    "The processing worker stopped responding. This can happen "
+                    "when the server restarts or runs out of memory. Please try "
+                    "reconstruction again."
+                )
+                job.message = "Worker timed out."
+                db.commit()
+
     return job
 
 

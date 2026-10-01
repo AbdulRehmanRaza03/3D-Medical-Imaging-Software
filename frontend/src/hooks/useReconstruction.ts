@@ -28,11 +28,15 @@ export function useReconstruction(studyId: number | null) {
     queryKey: ["job", jobId],
     queryFn: () => api.getJob(jobId as string),
     enabled: jobId != null,
+    retry: false,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
+      // Stop polling once the job reaches a terminal state.
       if (status === "completed" || status === "failed") return false;
       return 1000;
     },
+    // A job that never resolves (e.g. worker died) must not poll forever.
+    staleTime: Infinity,
   });
 
   // When job completes, refresh models.

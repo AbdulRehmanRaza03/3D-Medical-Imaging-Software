@@ -80,7 +80,13 @@ def get_mesh(model_id: int, db: Session = Depends(get_db)):
     return Response(
         content=glb,
         media_type="model/gltf-binary",
-        headers={"Content-Disposition": f'inline; filename="model_{model_id}.glb"'},
+        headers={
+            "Content-Disposition": f'inline; filename="model_{model_id}.glb"',
+            # Allow the client's WebGL loader to read this cross-origin binary.
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "Content-Disposition, Content-Length",
+            "Cache-Control": "no-store, max-age=0",
+        },
     )
 
 
@@ -156,7 +162,9 @@ def export_model(
         content=data,
         media_type=media_types[fmt],
         headers={
-            "Content-Disposition": f'attachment; filename="model_{model_id}.{fmt}"'
+            "Content-Disposition": f'attachment; filename="model_{model_id}.{fmt}"',
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Expose-Headers": "Content-Disposition, Content-Length",
         },
     )
 

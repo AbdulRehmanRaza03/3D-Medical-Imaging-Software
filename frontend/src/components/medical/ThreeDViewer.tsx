@@ -8,7 +8,7 @@ import {
   OrbitControls,
   useGLTF,
 } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
 
@@ -16,6 +16,32 @@ import { api } from "@/lib/api/client";
 import { useViewerStore } from "@/lib/viewer-store";
 import type { Model } from "@/types/medical";
 import { IconRefresh } from "@/components/ui/icons";
+
+/**
+ * Error boundary that catches GLB load/parse failures during 3D rendering and
+ * logs them so they are visible in the browser console instead of silently
+ * leaving the viewer empty.
+ */
+class ModelLoadErrorBoundary extends Component<
+  { children: ReactNode; onError: (err: unknown) => void },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error("[OrthoVision] Failed to load 3D mesh (GLB):", error);
+    this.props.onError(error);
+  }
+
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 function ModelMesh({
   url,
@@ -28,6 +54,9 @@ function ModelMesh({
   opacity: number;
   clipping: { x: number | null; y: number | null; z: number | null };
 }) {
+  // useGLTF loads the binary GLB from the backend. Any failure (CORS, missing
+  // mesh file, invalid GLB) throws here; the error is surfaced via the parent
+  // error boundary and logged to the console for debugging.
   const { scene } = useGLTF(url);
   const cloned = useMemo(() => scene.clone(), [scene]);
 
@@ -146,6 +175,7 @@ export function ThreeDViewer({ model, markers, onAddMarker, volumeShape, spacing
 
   const controlsRef = useRef<any>(null);
   const meshUrl = api.meshUrl(model.id);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Compute plane size from physical dimensions of the volume.
   const [planeSize, setPlaneSize] = useState<[number, number]>([100, 100]);
@@ -182,7 +212,15 @@ export function ThreeDViewer({ model, markers, onAddMarker, volumeShape, spacing
       </div>
 
       {/* Canvas */}
-      <div className="flex-1">
+      <div className="relative flex-1">
+        {loadError && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-slate-925/70 p-4">
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-center text-xs text-red-300">
+              Failed to load the 3D model mesh.
+              <span className="mt-1 block text-slate-400">Check the browser console for details.</span>
+            </div>
+          </div>
+        )}
         <Canvas
           orthographic={cameraMode === "orthographic"}
           camera={{ position: [120, 120, 120], fov: 45, near: 0.1, far: 5000 }}
@@ -193,12 +231,14 @@ export function ThreeDViewer({ model, markers, onAddMarker, volumeShape, spacing
           <directionalLight position={[-200, -100, -200]} intensity={0.35} />
 
           <Suspense fallback={null}>
-            <ModelMesh
-              url={meshUrl}
-              wireframe={wireframe}
-              opacity={opacity}
-              clipping={clipping}
-            />
+            <ModelLoadErrorBoundary onError={(e) => setLoadError(String(e))}>
+              <ModelMesh
+                url={meshUrl}
+                wireframe={wireframe}
+                opacity={opacity}
+                clipping={clipping}
+              />
+            </ModelLoadErrorBoundary>
             <MeasurementMarkers markers={markers} />
 
             {/* MPR reference planes */}
