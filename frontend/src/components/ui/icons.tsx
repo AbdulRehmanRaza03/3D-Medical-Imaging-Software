@@ -165,3 +165,75 @@ export function IconSpinner(props: P) {
     </svg>
   );
 }
+
+export function IconTrend(props: P) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 17l6-6 4 4 8-8" />
+      <path d="M14 7h7v7" />
+    </svg>
+  );
+}
+
+export function IconChart(props: P) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 3v18h18" />
+      <path d="M8 16v-5M13 16V8M18 16v-3" />
+    </svg>
+  );
+}
+
+export function IconDatabase(props: P) {
+  return (
+    <svg {...base} {...props}>
+      <ellipse cx="12" cy="5" rx="8" ry="3" />
+      <path d="M4 5v7c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+      <path d="M4 12v7c0 1.66 3.58 3 8 3s8-1.34 8-3v-7" />
+    </svg>
+  );
+}
+
+export function IconFile(props: P) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z" />
+      <path d="M14 3v5h5" />
+    </svg>
+  );
+}
+
+export function IconCalendar(props: P) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 10h18" />
+    </svg>
+  );
+}
+
+export function IconArrowUp(props: P) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 19V5m0 0l-6 6m6-6l6 6" />
+    </svg>
+  );
+}
+
+export function IconCheckCircle(props: P) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12l3 3 5-6" />
+    </svg>
+  );
+}
+
+export function IconAlertCircle(props: P) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v4M12 16h.01" />
+    </svg>
+  );
+}

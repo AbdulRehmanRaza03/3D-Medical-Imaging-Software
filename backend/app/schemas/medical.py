@@ -197,5 +197,10 @@ class DashboardStats(BaseModel):
     total_studies: int
     processed_studies: int
     models_generated: int
+    failed_studies: int = 0
+    uploaded_studies: int = 0
+    total_series: int = 0
+    total_slices: int = 0
     recent_studies: list[StudyOut]
     processing_jobs: list[JobOut]
+    recent_jobs: list[JobOut] = []

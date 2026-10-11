@@ -22,11 +22,21 @@ def get_job(job_id: str, db: Session = Depends(get_db)) -> JobOut:
 
 @router.get("/dashboard", response_model=DashboardStats)
 def dashboard(db: Session = Depends(get_db)) -> DashboardStats:
+    from app.models.study import Series
+
     total_studies = db.execute(select(func.count(Study.id))).scalar_one()
     processed_studies = db.execute(
         select(func.count(Study.id)).where(Study.status == StudyStatus.ready.value)
     ).scalar_one()
+    failed_studies = db.execute(
+        select(func.count(Study.id)).where(Study.status == StudyStatus.failed.value)
+    ).scalar_one()
+    uploaded_studies = db.execute(
+        select(func.count(Study.id)).where(Study.status == StudyStatus.uploaded.value)
+    ).scalar_one()
     models_generated = db.execute(select(func.count(MeshModel.id))).scalar_one()
+    total_series = db.execute(select(func.count(Series.id))).scalar_one()
+    total_slices = db.execute(select(func.coalesce(func.sum(Study.slice_count), 0))).scalar_one()
 
     recent = db.execute(
         select(Study).order_by(Study.created_at.desc()).limit(10)
@@ -39,10 +49,21 @@ def dashboard(db: Session = Depends(get_db)) -> DashboardStats:
         .limit(10)
     ).scalars().all()
 
+    recent_jobs = db.execute(
+        select(ProcessingJob)
+        .order_by(ProcessingJob.created_at.desc())
+        .limit(10)
+    ).scalars().all()
+
     return DashboardStats(
         total_studies=total_studies,
         processed_studies=processed_studies,
         models_generated=models_generated,
+        failed_studies=failed_studies,
+        uploaded_studies=uploaded_studies,
+        total_series=total_series,
+        total_slices=int(total_slices or 0),
         recent_studies=[StudyOut.model_validate(s) for s in recent],
         processing_jobs=[JobOut.model_validate(j) for j in active_jobs],
+        recent_jobs=[JobOut.model_validate(j) for j in recent_jobs],
     )

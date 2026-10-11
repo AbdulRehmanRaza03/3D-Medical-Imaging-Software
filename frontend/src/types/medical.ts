@@ -125,8 +125,13 @@ export interface DashboardStats {
   total_studies: number;
   processed_studies: number;
   models_generated: number;
+  failed_studies?: number;
+  uploaded_studies?: number;
+  total_series?: number;
+  total_slices?: number;
   recent_studies: Study[];
   processing_jobs: Job[];
+  recent_jobs?: Job[];
 }
 
 export interface ReconstructRequest {
