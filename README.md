@@ -48,6 +48,23 @@ graph LR
 
 ---
 
+## 📍 Project Status
+
+OrthoVision AI is built in **phases**. The current state is summarised below so readers can quickly understand what works, what is architecture-only, and what remains.
+
+| Status | Scope |
+| ------ | ----- |
+| ✅ **Complete & tested** | Phase 1 (DICOM ingestion → volume → Marching Cubes → 3D viewer + export) |
+| ✅ **Complete & tested** | Phase 2 (MPR axial/coronal/sagittal, synchronized crosshair, coordinate system, measurements) |
+| 🟡 **Architecture only** | Phase 3 (AI segmentation) — full MONAI/PyTorch pipeline implemented and unit-tested, but **no trained model checkpoint** is provided, so inference does not run yet |
+| ⬜ **Not started** | Phases 4–7 (intelligent analysis, orthopaedic planning, research platform, AI assistant) |
+
+**What is verified working** (covered by the automated test suite): the entire Phase 1–2 medical pipeline — DICOM validation, spatial slice ordering, HU conversion, volume construction, MPR extraction, coordinate conversion, Marching Cubes reconstruction, mesh clean-up, and STL/OBJ/GLB export.
+
+**What is not yet verified end-to-end** on a live deployment: AI segmentation inference (blocked on a model checkpoint), and production persistence (currently demonstrated with local storage + SQLite rather than cloud object storage + managed PostgreSQL).
+
+---
+
 ## ✨ Key Features
 
 | Domain | Capability |
@@ -62,6 +79,7 @@ graph LR
 | **Measurements** | Physical-unit distance (mm) and angle (°) from real model coordinates |
 | **Export** | STL, OBJ, and GLB export of the *actual* reconstructed mesh |
 | **Jobs** | Background reconstruction with live progress polling |
+| **Dashboard** | KPI metric cards, study status distribution, processing queue, and recent activity |
 
 ---
 
@@ -185,6 +203,8 @@ python verify_e2e.py              # upload → volume → reconstruct → mesh �
 
 ## 🧪 Testing
 
+> **Current verified status:** 56 backend tests (pytest) and 19 frontend tests (Vitest) all pass. TypeScript typecheck (`tsc --noEmit`) passes with no errors.
+
 ### Backend
 
 ```bash
@@ -192,13 +212,13 @@ cd backend
 pytest
 ```
 
-Covers DICOM validation, series detection, spatial slice ordering, HU conversion, volume construction, MPR plane extraction, coordinate conversion, reconstruction, mesh generation/validation, export, and API responses.
+Covers DICOM validation, series detection, spatial slice ordering, HU conversion, volume construction, MPR plane extraction, coordinate conversion, reconstruction, mesh generation/validation, export, measurements, segmentation infrastructure, and API responses.
 
 ### Frontend
 
 ```bash
 cd frontend
-npm test            # Vitest
+npm test            # Vitest (19 tests)
 npm run typecheck   # tsc --noEmit
 npm run build       # production build
 ```
@@ -330,6 +350,9 @@ Detailed design docs:
 - `docs/api.md` — API reference
 - `docs/deployment.md` — production deployment guide
 - `docs/phase-1.md` — Phase 1 scope
+- `docs/report-technical-audit-urdu.md` — technical audit report (Roman Urdu)
+- `docs/report-learning-explanation-urdu.md` — learning & explanation guide (Roman Urdu)
+- `docs/report-viva-preparation-urdu.md` — viva/interview preparation (Roman Urdu)
 
 ---
 
@@ -347,7 +370,7 @@ Detailed design docs:
 | ----- | ----- |
 | **1** ✅ | 3D Imaging Core — DICOM ingestion, volume construction, Marching Cubes, interactive viewer |
 | **2** ✅ | Advanced visualization — MPR (axial/coronal/sagittal), synchronized crosshair, clipping, opacity, coordinate system |
-| **3** ✅ | AI segmentation — MONAI/PyTorch 3D U-Net pipeline, model registry, CPU/GPU inference (checkpoint-gated) |
+| **3** 🟡 | AI segmentation — MONAI/PyTorch 3D U-Net pipeline, model registry (architecture complete; checkpoint-gated, inference pending trained weights) |
 | **4** | Intelligent analysis — volume, symmetry, ICP registration, deviation maps |
 | **5** | Orthopaedic planning — implant visualization & planning |
 | **6** | Research platform — projects, annotations, collaboration, reports |
